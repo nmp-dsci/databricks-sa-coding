@@ -26,6 +26,7 @@ make install     # Databricks CLI, python deps, JDK check
 make auth        # OAuth login (falls back to a PAT), writes the nmp-dsci profile
 make setup-uc    # create the schemas and landing volume — once per workspace
 make ship        # test -> deploy -> run
+make pull-repo   # mirror the repo into a workspace Git folder for UI browsing
 ```
 
 `make help` lists everything.
@@ -196,7 +197,7 @@ src/
   pipelines/                declarative pipeline transformations
   sql/                      ad-hoc SQL, runnable with `make sql`
 dashboards/                 .lvdash.json, deployed verbatim
-scripts/                    setup, auth, run_sql, deploy_endpoint
+scripts/                    setup, auth, run_sql, deploy_endpoint, sync_git_folder
 tests/                      local Spark unit tests
 .github/workflows/ci.yml    lint + tests on every push; bundle validate if secrets exist
 ```

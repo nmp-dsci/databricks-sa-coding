@@ -87,9 +87,28 @@ make run-pipeline           # run the declarative pipeline variant
 make train                  # train + register the demo model to UC
 make serve                  # roll the serving endpoint to the @champion version
 make sql FILE=src/sql/00_smoke.sql
+make pull-repo              # fast-forward the workspace Git folder to origin/main
 make pull-dashboard         # pull UI dashboard edits back into the repo
 make summary                # deployed resource URLs
 ```
+
+## Two copies of this repo live in the workspace
+
+They are separate and serve different purposes — confusing them wastes time.
+
+| Copy | Path | Updated by | What it is for |
+|---|---|---|---|
+| Bundle files | `/Workspace/Users/<you>/.bundle/databricks-sa-coding/dev/files` | `make deploy` | What the deployed jobs and pipeline actually execute |
+| Git folder | `/Workspace/Users/<you>/databricks-sa-coding` | `make pull-repo` | Browsing and running notebooks by hand in the UI |
+
+`make deploy` does **not** update the Git folder, and `make pull-repo` does not
+change what the jobs run. A Git folder is a clone pinned to a commit; it tracks
+the *remote*, so push before pulling it forward or it will fetch a commit that
+does not include your latest work.
+
+Note: `databricks repos list` returns an empty page on this workspace even when
+a folder exists. `scripts/sync_git_folder.py` looks the folder up by path with
+`workspace.get_status` instead — do not "simplify" it back to `repos.list()`.
 
 Prefer `make ship` over calling `databricks` directly, so tests always run first.
 

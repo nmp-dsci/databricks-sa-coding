@@ -81,6 +81,10 @@ sql: ## Run a .sql file on the serverless warehouse. Usage: make sql FILE=src/sq
 sync: ## Live-sync this folder to the workspace on every save (leave running)
 	@$(DB) sync --watch . "/Workspace/Users/$$($(DB) current-user me | python3 -c 'import json,sys; print(json.load(sys.stdin)["userName"])')/live/databricks-sa-coding"
 
+.PHONY: pull-repo
+pull-repo: ## Fast-forward the workspace Git folder to the tip of origin/main
+	@PROFILE=$(PROFILE) uv run python scripts/sync_git_folder.py
+
 .PHONY: pull-dashboard
 pull-dashboard: ## Pull UI dashboard edits back into dashboards/*.lvdash.json
 	@$(DB) bundle generate dashboard --resource smoke_dashboard -t $(TARGET) --force
