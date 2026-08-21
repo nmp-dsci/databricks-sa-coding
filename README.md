@@ -115,8 +115,10 @@ moved after the fact is explainable instead of alarming.
 
 ## Job or pipeline?
 
-Both are deployed, doing the same work, so the comparison can be made against
-running code instead of slideware.
+Both are deployed, running the **same** `clean_events` and `daily_revenue` from
+`src/lib` — the pipeline imports them rather than re-implementing them. So the
+comparison is purely about the framework, and verified rather than asserted: the
+symmetric difference between the two gold marts is zero rows.
 
 |  | Job (`src/notebooks/`) | Declarative pipeline (`src/pipelines/`) |
 |---|---|---|
@@ -129,6 +131,15 @@ running code instead of slideware.
 The honest summary: the pipeline gives you lineage, expectations and incremental
 refresh for free, and takes away control. Neither is the correct answer in
 general; which one fits depends on how much of the work is table-to-table.
+
+One constraint shaped the pipeline as written. `01_generate.py` writes bronze
+with `mode("overwrite")`, so the whole table is regenerated every run — and a
+streaming read over that fails on the overwrite commit, because streaming needs
+an append-only source. Materialized views are the right shape for a full-refresh
+source. If bronze became a real append-only feed (Auto Loader over the landing
+volume), the right shape changes to a streaming table fed by
+`create_auto_cdc_flow(keys=["event_id"], sequence_by=struct("ingest_ts", "event_ts"))`,
+which is the declarative equivalent of the dedupe window inside `clean_events`.
 
 ---
 

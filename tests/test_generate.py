@@ -56,6 +56,33 @@ def test_emits_late_arrivals(sample):
     assert late > 0
 
 
+def test_late_arrivals_are_a_minority_not_everything(sample):
+    """The regression this file exists for.
+
+    An earlier generator stamped every row with `current_timestamp()` as its
+    ingest time while spreading event time over 90 days. `ingest_ts - event_ts`
+    then grew with age, so every historical row read as late, `late_orders`
+    equalled `orders` on every day but the most recent, and the column carried
+    no signal at all. It looked fine in a hand-built fixture — which is exactly
+    why this assertion is made against generated data instead.
+    """
+    total = sample.count()
+    late = sample.filter(F.datediff(F.col("ingest_ts"), F.col("event_ts")) > 1).count()
+    fraction = late / total
+    assert 0.005 < fraction < 0.25, f"late fraction {fraction:.3f} is not a minority slice"
+
+
+def test_ingest_never_precedes_the_event(sample):
+    """A negative lag is not a data quality signal, it is a broken generator."""
+    assert sample.filter(F.col("ingest_ts") < F.col("event_ts")).count() == 0
+
+
+def test_ingest_is_never_in_the_future(sample):
+    """`least(..., current_timestamp())` is what keeps this true for events near
+    the end of the window, where adding a multi-day delay would overshoot now."""
+    assert sample.filter(F.col("ingest_ts") > F.current_timestamp()).count() == 0
+
+
 def test_only_known_statuses(sample):
     found = {r.status for r in sample.select("status").distinct().collect()}
     assert found <= set(STATUSES)

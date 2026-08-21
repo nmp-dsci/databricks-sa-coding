@@ -86,9 +86,16 @@ def make_events(
         # Log-ish spread so the mean is not the median — a flat uniform amount
         # makes every downstream statistic uninteresting.
         .withColumn("amount", F.round(F.exp(F.col("r_amount") * 6) + 5, 2))
-        # Ingest time is "now" for everything; event time is spread over the
-        # window, with a slice pushed much further back to be genuinely late.
-        .withColumn("ingest_ts", F.current_timestamp())
+        # Event time is spread over the window. Ingest time is then derived
+        # FROM it, which is the part that has to be right: stamping every row
+        # with `current_timestamp()` would make `ingest_ts - event_ts` grow with
+        # age, so every historical row reads as "late" and the column carries no
+        # signal at all.
+        #
+        # Normal rows land within hours of the event. The late slice lands days
+        # after, which is what a downstream `datediff(...) > 1` is meant to
+        # catch. `least(..., current_timestamp())` keeps ingest from landing in
+        # the future for events near the end of the window.
         .withColumn(
             "event_ts",
             F.expr(
@@ -97,11 +104,20 @@ def make_events(
             ),
         )
         .withColumn(
-            "event_ts",
-            F.when(
-                F.col("r_defect") > (1 - LATE_RATE),
-                F.expr(f"event_ts - make_interval(0, 0, 0, {days}, 0, 0, 0)"),
-            ).otherwise(F.col("event_ts")),
+            "_delay_hours",
+            F.when(F.col("r_defect") > (1 - LATE_RATE), 48 + F.col("r_time") * 192).otherwise(
+                F.col("r_amount") * 6
+            ),
+        )
+        .withColumn(
+            "ingest_ts",
+            F.least(
+                F.expr(
+                    "event_ts + make_interval(0, 0, 0, 0, 0, 0, "
+                    "CAST(_delay_hours * 3600 AS DOUBLE))"
+                ),
+                F.current_timestamp(),
+            ),
         )
         .select("event_id", "customer_id", "status", "amount", "event_ts", "ingest_ts")
     )

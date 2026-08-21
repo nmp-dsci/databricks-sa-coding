@@ -111,10 +111,15 @@ The same discipline applies to `src/lib/generate.py`, tested in
 (duplicates, late arrivals, nulls); a change that quietly removes one leaves the
 pipeline tested against nothing interesting, so those defects are asserted.
 
-If a rule changes in `transforms.py`, check whether
-`src/pipelines/smoke/transformations/01_smoke.py` needs the same change — the
-two are deliberately parallel implementations, and a silent divergence makes the
-comparison between them meaningless.
+The declarative pipeline imports the *same* `clean_events` and `daily_revenue`
+rather than re-implementing them, so a rule change in `transforms.py` reaches
+both the job and the pipeline at once — there is no second copy to keep in sync.
+The pipeline reaches `src/lib` via `sa_coding.lib_root` in its `configuration:`
+block, because a pipeline has no notebook-relative working directory.
+
+The expectations in the pipeline are a runtime guard, not the primary defence:
+`clean_events` already removes those rows and the unit tests prove it. If an
+expectation ever fires, there is a bug the tests did not catch.
 
 ## When changing the dashboard
 

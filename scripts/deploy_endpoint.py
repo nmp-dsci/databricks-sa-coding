@@ -37,6 +37,10 @@ def main() -> int:
     # MLflow at it rather than requiring DATABRICKS_HOST/TOKEN in the shell.
     client = WorkspaceClient(profile=PROFILE)
     os.environ.setdefault("DATABRICKS_CONFIG_PROFILE", PROFILE)
+    # Both URIs, not just the registry one. Without the tracking URI MLflow
+    # falls back to a local sqlite store and drops an `mlflow.db` in the repo
+    # root the first time this runs.
+    mlflow.set_tracking_uri("databricks")
     mlflow.set_registry_uri("databricks-uc")
 
     try:
@@ -49,7 +53,11 @@ def main() -> int:
 
     print(f"{full_name}@champion -> v{version}")
 
+    # `name` is required on EndpointCoreConfigInput in the current SDK even
+    # though `create` also takes it — omitting it raises a bare TypeError that
+    # reads like a bug in this script rather than a missing field.
     config = EndpointCoreConfigInput(
+        name=ENDPOINT,
         served_entities=[
             ServedEntityInput(
                 name=MODEL.replace("_", "-"),
@@ -61,7 +69,7 @@ def main() -> int:
                 # the wrong one for a latency SLA.
                 scale_to_zero_enabled=True,
             )
-        ]
+        ],
     )
 
     existing = {e.name for e in client.serving_endpoints.list()}

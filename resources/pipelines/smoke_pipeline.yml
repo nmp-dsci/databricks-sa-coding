@@ -4,8 +4,9 @@
 # imperative notebook orchestration there.
 #
 # NOT A REPLACEMENT. It writes into its OWN schema (${var.pipeline_schema}) so
-# it cannot touch the tables the job owns: same table names, different schema,
-# so a diff between them is purely about the framework.
+# it cannot touch the tables the job owns: same table names, different schema.
+# It also imports the SAME transforms from src/lib, so a diff between the two
+# outputs is purely about the framework and never about drifted logic.
 #
 # No trigger and no schedule, `continuous: false`. Deploying creates it; it only
 # runs when someone types `make run-pipeline`.
@@ -41,3 +42,8 @@ resources:
       # job `parameters:` block.
       configuration:
         sa_coding.source_table: ${var.catalog}.${var.schema}.bronze_events
+        # The deployed bundle file root, so the transformations can import the
+        # SAME src/lib/transforms.py the job uses. A job notebook gets there with
+        # a relative `..`; a pipeline has no notebook-relative cwd, so the path is
+        # passed in explicitly.
+        sa_coding.lib_root: ${workspace.file_path}/src
