@@ -1,0 +1,32 @@
+# One-time Unity Catalog bootstrap. Run once per workspace with `make setup-uc`.
+#
+# Why a job and not the bundle: a DAB *can* declare `resources.schemas` and
+# `resources.volumes`, but on Free Edition the catalog is fixed (`workspace`)
+# and bundle-managed schemas get the dev name prefix, which then no longer
+# matches the ${var.schema} the notebooks and dashboard SQL reference. Creating
+# them from SQL keeps one set of names across every target.
+resources:
+  jobs:
+    setup:
+      name: sa-coding-setup
+      max_concurrent_runs: 1
+
+      # No `job_clusters:` block anywhere in this repo — omitting compute config
+      # *is* the serverless config, and serverless is the only option on Free
+      # Edition.
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: volume
+          default: ${var.volume}
+        - name: pipeline_schema
+          default: ${var.pipeline_schema}
+        - name: ml_schema
+          default: ${var.ml_schema}
+
+      tasks:
+        - task_key: setup
+          notebook_task:
+            notebook_path: ../../src/notebooks/00_setup.py

@@ -1,0 +1,43 @@
+# A Lakeflow Declarative Pipeline (formerly DLT) reading the same generated
+# data as `smoke_job.yml`, kept side by side so the two approaches can be read
+# against each other — declarative dependency graph and expectations here,
+# imperative notebook orchestration there.
+#
+# NOT A REPLACEMENT. It writes into its OWN schema (${var.pipeline_schema}) so
+# it cannot touch the tables the job owns: same table names, different schema,
+# so a diff between them is purely about the framework.
+#
+# No trigger and no schedule, `continuous: false`. Deploying creates it; it only
+# runs when someone types `make run-pipeline`.
+resources:
+  pipelines:
+    smoke_pipeline:
+      name: sa-coding-smoke-pipeline
+
+      # Where the pipeline publishes. `schema` is the modern key (the old one
+      # was `target`). Deliberately NOT ${var.schema} — see header.
+      catalog: ${var.catalog}
+      schema: ${var.pipeline_schema}
+
+      # Serverless is the only option on Free Edition, and the only way to get
+      # incremental materialized-view refresh.
+      serverless: true
+
+      # Triggered, not continuous: there is no always-on source, so a continuous
+      # pipeline would bill to do nothing.
+      continuous: false
+
+      # Keeps compute warm between updates and skips the retry-with-backoff
+      # cycle, so an iteration is seconds rather than minutes. The `demo` target
+      # in databricks.yml flips this to false.
+      development: true
+
+      libraries:
+        - glob:
+            include: ../../src/pipelines/smoke/transformations/**
+
+      # Values the transformation files read with `spark.conf.get(...)`. This is
+      # how a pipeline gets parameters — there is no `dbutils.widgets` and no
+      # job `parameters:` block.
+      configuration:
+        sa_coding.source_table: ${var.catalog}.${var.schema}.bronze_events

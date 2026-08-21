@@ -1,0 +1,42 @@
+# The end-to-end proof that this repo can deploy and run work on the workspace.
+#
+# generate -> transform -> checks is deliberately the same shape as a real
+# medallion job, so growing this into a project means replacing the bodies, not
+# rewiring the graph. `checks` runs last on purpose: a failed assertion fails
+# the run, so bad numbers stop here rather than reaching a dashboard.
+resources:
+  jobs:
+    smoke:
+      name: sa-coding-smoke
+      # Free Edition allows 5 concurrent job tasks; this job runs 3 in sequence.
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: volume
+          default: ${var.volume}
+        - name: rows
+          default: "50000"
+
+      tasks:
+        - task_key: generate
+          notebook_task:
+            notebook_path: ../../src/notebooks/01_generate.py
+
+        - task_key: transform
+          depends_on:
+            - task_key: generate
+          notebook_task:
+            notebook_path: ../../src/notebooks/02_transform.py
+
+        - task_key: checks
+          depends_on:
+            - task_key: transform
+          notebook_task:
+            notebook_path: ../../src/notebooks/03_checks.py
+
+      queue:
+        enabled: true

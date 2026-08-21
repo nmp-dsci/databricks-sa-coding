@@ -1,0 +1,81 @@
+# Databricks Asset Bundle for databricks-sa-coding.
+#
+# Everything deployable lives under resources/ and is included below. This file
+# only holds the bundle identity, the variables those resources interpolate, and
+# the deploy targets.
+bundle:
+  name: databricks-sa-coding
+
+variables:
+  catalog:
+    description: Unity Catalog catalog. Free Edition ships with `workspace`.
+    default: workspace
+
+  schema:
+    description: Schema holding the bronze/silver/gold tables and the landing volume.
+    default: sa_coding
+
+  volume:
+    description: >-
+      UC volume (inside `schema`) that generated datasets land in. Created by
+      src/notebooks/00_setup.py rather than by the bundle, because a DAB cannot
+      create a volume's parent schema and a volume in the same deploy.
+    default: landing
+
+  pipeline_schema:
+    description: >-
+      Schema for the Lakeflow Declarative Pipeline in resources/pipelines/.
+      Deliberately separate from `schema` so the pipeline can never write over
+      the tables the job owns — the two run side by side for comparison.
+    default: sa_coding_dp
+
+  ml_schema:
+    description: >-
+      Schema for the ML loop (features, registered model, predictions).
+      Separate from `schema` for the same reason as pipeline_schema.
+    default: sa_coding_ml
+
+  warehouse_id:
+    description: >-
+      Serverless SQL warehouse, used by dashboards and SQL tasks. Resolved BY
+      NAME at deploy time rather than hardcoded as an id, so this file needs no
+      edit when moving between workspaces. Free Edition provisions a warehouse
+      called "Serverless Starter Warehouse" on signup.
+      Override with --var="warehouse_id=<id>" if yours is named differently.
+    lookup:
+      warehouse: Serverless Starter Warehouse
+
+include:
+  - resources/jobs/*.yml
+  - resources/pipelines/*.yml
+  - resources/dashboards/*.yml
+  - resources/serving/*.yml
+
+targets:
+  # Default target. Deploys under /Workspace/Users/<you>/.bundle/... with a
+  # dev_<user>_ name prefix, so nothing collides with hand-made notebooks and
+  # schedules/triggers are paused. Run things by hand with `make run`.
+  #
+  # No `host:` here on purpose. The host comes from the CLI profile (--profile,
+  # which the Makefile always passes), so the same file works against any
+  # workspace without an edit.
+  dev:
+    mode: development
+    default: true
+
+  # Same workspace, deployed as a "real" release: unprefixed names, schedules
+  # live. Useful when a build needs to be shown to someone else.
+  demo:
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}
+    permissions:
+      - level: CAN_MANAGE
+        user_name: ${workspace.current_user.userName}
+    resources:
+      pipelines:
+        smoke_pipeline:
+          # The pipeline yml sets development: true for fast iteration;
+          # production mode refuses that combination, so the demo release flips
+          # it here rather than forking the resource file.
+          development: false

@@ -1,0 +1,37 @@
+[project]
+name = "databricks-sa-coding"
+version = "0.1.0"
+description = "Local-first Databricks scaffold: notebooks, pipelines, dashboards and ML authored here, deployed to a Free Edition workspace via Asset Bundles."
+requires-python = ">=3.11,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  # Local Spark for unit-testing transforms without a workspace. Pinned to the
+  # Databricks Runtime 16.x Spark line so local behaviour matches serverless.
+  "pyspark==3.5.3",
+  "pytest>=8.3",
+  "ruff>=0.14",
+  # scripts/run_sql.py, scripts/deploy_endpoint.py
+  "databricks-sdk>=0.68",
+  "pandas>=2.2,<3",
+  "pyarrow>=15",
+  "scikit-learn>=1.4",
+  "mlflow>=3.1",
+  "faker>=30.0",
+  "pyyaml>=6.0.3",
+]
+
+[tool.ruff]
+line-length = 100
+# Databricks source-format notebooks are valid Python but use `dbutils`,
+# `display` and `spark` as injected globals — linting them floods the output.
+extend-exclude = ["src/notebooks", "src/pipelines"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+filterwarnings = ["ignore::DeprecationWarning"]

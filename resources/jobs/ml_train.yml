@@ -1,0 +1,30 @@
+# The AI/ML deploy path: train a model, log it to MLflow, register it to Unity
+# Catalog and move the @champion alias.
+#
+# Run on demand (`make train`), not on a schedule — there is no upstream feed
+# to react to yet, and a Free Edition workspace should not be burning serverless
+# minutes on a clock.
+#
+# The serving endpoint is NOT in this bundle. See resources/serving/README.md
+# for why (an endpoint must reference a model version that already exists, so a
+# first deploy into an empty workspace would fail).
+resources:
+  jobs:
+    ml_train:
+      name: sa-coding-ml-train
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: ml_schema
+          default: ${var.ml_schema}
+        - name: model_name
+          default: demo_estimator
+
+      tasks:
+        - task_key: train_register
+          notebook_task:
+            notebook_path: ../../src/notebooks/ml/01_train_register.py

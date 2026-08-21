@@ -1,0 +1,319 @@
+{
+  "datasets": [
+    {
+      "name": "ds_daily",
+      "displayName": "Daily revenue",
+      "queryLines": [
+        "SELECT event_date, orders, customers, revenue, avg_order_value, late_orders\n",
+        "FROM workspace.sa_coding.gold_daily_revenue\n",
+        "ORDER BY event_date\n"
+      ]
+    },
+    {
+      "name": "ds_totals",
+      "displayName": "Totals",
+      "queryLines": [
+        "SELECT\n",
+        "  SUM(revenue)      AS revenue,\n",
+        "  SUM(orders)       AS orders,\n",
+        "  SUM(late_orders)  AS late_orders,\n",
+        "  ROUND(100.0 * SUM(late_orders) / NULLIF(SUM(orders), 0), 1) AS late_pct\n",
+        "FROM workspace.sa_coding.gold_daily_revenue\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Overview",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": 2,
+      "layout": [
+        {
+          "widget": {
+            "name": "md_header",
+            "textbox_spec": "# SA Coding \u2014 smoke dashboard\n\nProves the dashboard deploy path end to end: this JSON is deployed verbatim by the bundle and reads the marts `sa-coding-smoke` builds.\n\nTable names are **fully qualified and hardcoded** \u2014 bundle variables are not substituted inside `.lvdash.json`."
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_revenue",
+            "queries": [
+              {
+                "name": "q_totals",
+                "query": {
+                  "datasetName": "ds_totals",
+                  "fields": [
+                    {
+                      "name": "revenue",
+                      "expression": "`revenue`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "revenue",
+                  "displayName": "Total revenue",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "AUD",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 0
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total revenue"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_orders",
+            "queries": [
+              {
+                "name": "q_totals",
+                "query": {
+                  "datasetName": "ds_totals",
+                  "fields": [
+                    {
+                      "name": "orders",
+                      "expression": "`orders`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "orders",
+                  "displayName": "Orders"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Orders"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_late",
+            "queries": [
+              {
+                "name": "q_totals",
+                "query": {
+                  "datasetName": "ds_totals",
+                  "fields": [
+                    {
+                      "name": "late_pct",
+                      "expression": "`late_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "late_pct",
+                  "displayName": "Late %"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Late arrivals (% of orders)"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "chart_revenue",
+            "queries": [
+              {
+                "name": "q_daily",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "event_date",
+                      "expression": "`event_date`"
+                    },
+                    {
+                      "name": "revenue",
+                      "expression": "`revenue`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "event_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Event date"
+                },
+                "y": {
+                  "fieldName": "revenue",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Revenue"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Revenue by event date"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "table_daily",
+            "queries": [
+              {
+                "name": "q_daily",
+                "query": {
+                  "datasetName": "ds_daily",
+                  "fields": [
+                    {
+                      "name": "event_date",
+                      "expression": "`event_date`"
+                    },
+                    {
+                      "name": "orders",
+                      "expression": "`orders`"
+                    },
+                    {
+                      "name": "customers",
+                      "expression": "`customers`"
+                    },
+                    {
+                      "name": "revenue",
+                      "expression": "`revenue`"
+                    },
+                    {
+                      "name": "avg_order_value",
+                      "expression": "`avg_order_value`"
+                    },
+                    {
+                      "name": "late_orders",
+                      "expression": "`late_orders`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "event_date",
+                    "displayName": "Event date"
+                  },
+                  {
+                    "fieldName": "orders",
+                    "displayName": "Orders"
+                  },
+                  {
+                    "fieldName": "customers",
+                    "displayName": "Customers"
+                  },
+                  {
+                    "fieldName": "revenue",
+                    "displayName": "Revenue"
+                  },
+                  {
+                    "fieldName": "avg_order_value",
+                    "displayName": "Avg order value"
+                  },
+                  {
+                    "fieldName": "late_orders",
+                    "displayName": "Late orders"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Daily detail"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 8
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F5F5F5",
+        "dark": "#1B1B1B"
+      }
+    }
+  }
+}
